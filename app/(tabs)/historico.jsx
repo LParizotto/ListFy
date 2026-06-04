@@ -1,9 +1,10 @@
-import { Text, View } from "react-native";
+import { router } from "expo-router";
+import { useEffect } from "react";
 
 export default function Historico() {
-  return (
-    <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
-      <Text>Histórico</Text>
-    </View>
-  );
+  useEffect(() => {
+    router.replace({ pathname: "/", params: { aba: "comprados" } });
+  }, []);
+
+  return null;
 }

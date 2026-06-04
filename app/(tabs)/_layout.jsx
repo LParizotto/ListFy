@@ -1,16 +1,15 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Tabs, router } from "expo-router";
-import { TouchableOpacity, View } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Tabs, router, useGlobalSearchParams, usePathname } from "expo-router";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, TouchableOpacity, View } from "react-native";
 import { colors } from "../../constants/theme";
 
 function BotaoAdicionar() {
   return (
     <TouchableOpacity
-      onPress={() => router.push("/modal-adicionar")}
-      style={{
-        flex: 1,
-        alignItems: "center",
-      }}
+      onPress={() => router.push("modal-adicionar")}
+      style={{ flex: 1, alignItems: "center" }}
     >
       <View
         style={{
@@ -35,6 +34,48 @@ function BotaoAdicionar() {
 }
 
 export default function TabsLayout() {
+  const pathname = usePathname();
+  const params = useGlobalSearchParams();
+
+  const [carregando, setCarregando] = useState(true);
+
+  useEffect(() => {
+    const verificarAcesso = async () => {
+      try {
+        const tokenSalvo = await AsyncStorage.getItem("@listfy_token");
+
+        if (!tokenSalvo) {
+          router.replace("/login");
+        }
+      } catch (error) {
+        console.error("Erro ao verificar token:", error);
+      } finally {
+        setCarregando(false);
+      }
+    };
+
+    verificarAcesso();
+  }, [pathname]);
+  if (carregando) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: colors.background,
+        }}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
+      </View>
+    );
+  }
+
+  const naIndex = pathname === "/";
+  const naAbaComprados = params.aba === "comprados";
+  const listasAtivo = naIndex && !naAbaComprados;
+  const historicoAtivo = naIndex && naAbaComprados;
+
   return (
     <Tabs
       screenOptions={{
@@ -54,18 +95,45 @@ export default function TabsLayout() {
         name="index"
         options={{
           title: "Listas",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="cart-outline" size={32} color={color} />
+          tabBarIcon: () => (
+            <Ionicons
+              name="cart-outline"
+              size={32}
+              color={listasAtivo ? colors.primary : colors.textMuted}
+            />
           ),
+          tabBarLabelStyle: {
+            color: listasAtivo ? colors.primary : colors.textMuted,
+          },
+        }}
+        listeners={{
+          tabPress: (e) => {
+            e.preventDefault();
+            router.navigate({ pathname: "/", params: { aba: "pendentes" } });
+          },
         }}
       />
+
       <Tabs.Screen
         name="historico"
         options={{
           title: "Histórico",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="time-outline" size={size} color={color} />
+          tabBarIcon: ({ size }) => (
+            <Ionicons
+              name="time-outline"
+              size={size}
+              color={historicoAtivo ? colors.primary : colors.textMuted}
+            />
           ),
+          tabBarLabelStyle: {
+            color: historicoAtivo ? colors.primary : colors.textMuted,
+          },
+        }}
+        listeners={{
+          tabPress: (e) => {
+            e.preventDefault();
+            router.navigate({ pathname: "/", params: { aba: "comprados" } });
+          },
         }}
       />
       <Tabs.Screen

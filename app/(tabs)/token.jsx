@@ -1,27 +1,42 @@
-import { MaterialCommunityIcons } from "@expo/vector-icons"
-import * as Clipboard from "expo-clipboard"
-import { useState } from "react"
-import { Alert, SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from "react-native"
-import { colors, fontSizes, fontWeights, radius, shadows, spacing } from "../../constants/theme"
-import { formatarData } from "../../utils/formaterUtil"
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import * as Clipboard from "expo-clipboard";
+import { useState } from "react";
+import {
+  Alert,
+  SafeAreaView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import {
+  colors,
+  fontSizes,
+  fontWeights,
+  radius,
+  shadows,
+  spacing,
+} from "../../constants/theme";
+import { formatarData } from "../../utils/formaterUtil";
 
 // TODO: substituir pelo dado vindo da API
 
 const TOKEN_MOCK = {
   valor: "ABCD-1234",
   dataCriacao: new Date("2025-01-10"),
-}
+};
 
 export default function Token() {
   // TODO: substituir pelo dado vindo da API
-  const [token, setToken] = useState(TOKEN_MOCK)
-  const [copiado, setCopiado] = useState(false)
+  const [token, setToken] = useState(TOKEN_MOCK);
+  const [copiado, setCopiado] = useState(false);
 
   const handleCopiar = async () => {
-    await Clipboard.setStringAsync(token.valor)
-    setCopiado(true)
-    setTimeout(() => setCopiado(false), 2000)
-  }
+    await Clipboard.setStringAsync(token.valor);
+    setCopiado(true);
+    setTimeout(() => setCopiado(false), 2000);
+  };
 
   const handleGerarToken = () => {
     Alert.alert(
@@ -37,20 +52,19 @@ export default function Token() {
             setToken({
               valor: "XXXX-XXXX",
               dataCriacao: new Date(),
-            })
-            setCopiado(false)
+            });
+            setCopiado(false);
           },
         },
-      ]
-    )
-  }
+      ],
+    );
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.background} />
 
       <View style={styles.container}>
-
         {/* TODO: substituir pelo nome real vindo do contexto/store  */}
         <Text style={styles.nomeEmpresa}>Nome da empresa</Text>
         <View style={styles.empresaDivider} />
@@ -95,12 +109,10 @@ export default function Token() {
         >
           <Text style={styles.gerarBtnTexto}>Gerar Token</Text>
         </TouchableOpacity>
-
       </View>
     </SafeAreaView>
-  )
+  );
 }
-
 
 const styles = StyleSheet.create({
   safeArea: {
@@ -111,7 +123,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: spacing.lg,
-    paddingTop: spacing.lg,
+    paddingTop: 80,
   },
 
   nomeEmpresa: {
@@ -125,8 +137,7 @@ const styles = StyleSheet.create({
     height: 3,
     backgroundColor: colors.primary,
     borderRadius: radius.full,
-    marginTop: spacing.xs,
-    marginBottom: spacing.xl,
+    marginBottom: 100,
     width: "100%",
   },
 
@@ -134,7 +145,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: spacing.xs,
-    marginBottom: spacing.md,
+    marginBottom: 20,
   },
 
   accentBar: {
@@ -212,4 +223,4 @@ const styles = StyleSheet.create({
     fontWeight: fontWeights.semibold,
     letterSpacing: 0.2,
   },
-})
+});
