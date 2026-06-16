@@ -1,5 +1,4 @@
 import { Ionicons } from "@expo/vector-icons";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
@@ -19,12 +18,13 @@ import {
   radius,
   spacing,
 } from "../constants/theme";
-
-// MOCK: Token temporário para acesso
-const TOKEN_VALIDO = "ABCD-1234";
+import { ActivityIndicator } from "react-native-paper";
+import { validarToken } from "../services/api";
+import { saveToken } from "../services/store";
 
 export default function Inicio() {
   const [tokenDigitado, setTokenDigitado] = useState("");
+  const [carregando, setCarregando] = useState(false);
 
   const handleAcesso = async () => {
     if (!tokenDigitado.trim()) {
@@ -32,21 +32,19 @@ export default function Inicio() {
       return;
     }
 
-    const TOKEN_VALIDO = "ABCD-1234";
-
-    if (tokenDigitado.trim().toUpperCase() === TOKEN_VALIDO) {
-      try {
-        await AsyncStorage.setItem("@listfy_token", TOKEN_VALIDO);
-
+    setCarregando(true);
+    try {
+      const { valido } = await validarToken(tokenDigitado.trim());
+      if (valido) {
+        await saveToken(tokenDigitado.trim());
         router.replace("/");
-      } catch (error) {
-        Alert.alert("Erro", "Não foi possível salvar o seu acesso.");
+      } else {
+        Alert.alert("Acesso Negado", "Token inválido ou expirado.");
       }
-    } else {
-      Alert.alert(
-        "Acesso Negado",
-        "Token inválido! Dica: O token de teste é ABCD-1234",
-      );
+    } catch {
+      Alert.alert("Erro", "Não foi possível conectar ao servidor.");
+    } finally {
+      setCarregando(false);
     }
   };
 
@@ -74,18 +72,28 @@ export default function Inicio() {
             autoCorrect={false}
             onSubmitEditing={handleAcesso}
             returnKeyType="go"
+            editable={!carregando}
           />
           <TouchableOpacity
             style={styles.botaoSeta}
             onPress={handleAcesso}
             activeOpacity={0.8}
+            disabled={carregando}
             hitSlop={{ top: 15, bottom: 15, left: 15, right: 15 }}
           >
-            <Ionicons
-              name="arrow-forward-outline"
-              size={24}
-              color={colors.white}
-            />
+            {carregando ? (
+              <ActivityIndicator
+                animating={true}
+                size="small"
+                color={colors.white}
+              />
+            ) : (
+              <Ionicons
+                name="arrow-forward-outline"
+                size={24}
+                color={colors.white}
+              />
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -94,20 +102,14 @@ export default function Inicio() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8F7F4",
-  },
+  container: { flex: 1, backgroundColor: "#F8F7F4" },
   content: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: spacing.xl,
   },
-  header: {
-    alignItems: "center",
-    marginBottom: 80,
-  },
+  header: { alignItems: "center", marginBottom: 80 },
   logo: {
     fontSize: 64,
     fontWeight: fontWeights.bold,
@@ -140,7 +142,5 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingLeft: 24,
   },
-  botaoSeta: {
-    padding: spacing.xs,
-  },
+  botaoSeta: { padding: spacing.xs },
 });

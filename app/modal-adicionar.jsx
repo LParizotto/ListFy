@@ -1,7 +1,8 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -11,40 +12,43 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import {
-  colors,
-  fontSizes,
-  fontWeights,
-  radius,
-  shadows,
-  spacing,
-} from "../constants/theme";
-
-const LOCAIS_ATIVOS_MOCK = [
-  { id: "1", nome: "Local 01" },
-  { id: "2", nome: "Local 02" },
-  { id: "3", nome: "Local 03" },
-  { id: "4", nome: "Local 04" },
-];
+import { addItem } from "../services/api";
+import { useLocais } from "../hooks/hooks";
+import { colors, fontSizes, fontWeights, radius, shadows, spacing } from "../constants/theme";
 
 export default function ModalAdicionar() {
   const [nomeItem, setNomeItem] = useState("");
   const [quantidade, setQuantidade] = useState("1");
   const [descricao, setDescricao] = useState("");
   const [localSelecionado, setLocalSelecionado] = useState(null);
+  const [salvando, setSalvando] = useState(false);
 
-  const handleSalvar = () => {
+  const { locais } = useLocais();
+  const locaisAtivos = locais.filter((l) => l.ativo);
+
+  const handleSalvar = async () => {
     if (!nomeItem.trim()) return;
 
-    console.log({
-      nome: nomeItem,
-      quantidade: quantidade,
-      descricao: descricao,
-      local: localSelecionado ? localSelecionado.nome : "Sem local",
-      comprado: false,
-    });
+    const qtd = parseInt(quantidade, 10);
+    if (!qtd || qtd <= 0) {
+      Alert.alert("Aviso", "Quantidade deve ser maior que zero.");
+      return;
+    }
 
-    router.back();
+    setSalvando(true);
+    try {
+      await addItem({
+        nome: nomeItem.trim(),
+        quantidade: qtd,
+        descricao: descricao.trim() || undefined,
+        idLocal: localSelecionado?.idLocal ?? undefined,
+      });
+      router.back();
+    } catch (e) {
+      Alert.alert("Erro", e.message);
+    } finally {
+      setSalvando(false);
+    }
   };
 
   return (
@@ -59,11 +63,7 @@ export default function ModalAdicionar() {
       >
         <View style={styles.header}>
           <Text style={styles.titulo}>Novo Item</Text>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.botaoFechar}
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          >
+          <TouchableOpacity onPress={() => router.back()} style={styles.botaoFechar} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
             <Ionicons name="close" size={24} color={colors.dark} />
           </TouchableOpacity>
         </View>
@@ -83,11 +83,12 @@ export default function ModalAdicionar() {
         <View style={styles.inputGroup}>
           <Text style={styles.label}>Quantidade</Text>
           <TextInput
-            placeholder="Ex: 1, 2kg, 3 caixas..."
+            placeholder="Ex: 1, 2, 3..."
             placeholderTextColor={colors.textMuted}
             value={quantidade}
             onChangeText={setQuantidade}
             style={styles.input}
+            keyboardType="numeric"
           />
         </View>
 
@@ -105,54 +106,47 @@ export default function ModalAdicionar() {
           />
         </View>
 
-        <View style={styles.secaoLocais}>
-          <Text style={styles.label}>Onde encontrar este item?</Text>
-
-          <View style={styles.chipsContainer}>
-            {LOCAIS_ATIVOS_MOCK.map((local) => {
-              const itemSelecionado = localSelecionado?.id === local.id;
-              return (
-                <TouchableOpacity
-                  key={local.id}
-                  activeOpacity={0.8}
-                  onPress={() =>
-                    setLocalSelecionado(itemSelecionado ? null : local)
-                  }
-                  style={[
-                    styles.chip,
-                    itemSelecionado && styles.chipSelecionado,
-                  ]}
-                >
-                  <Ionicons
-                    name={itemSelecionado ? "location" : "location-outline"}
-                    size={14}
-                    color={itemSelecionado ? colors.white : colors.textMuted}
-                  />
-                  <Text
-                    style={[
-                      styles.chipTexto,
-                      itemSelecionado && styles.chipTextoSelecionado,
-                    ]}
+        {locaisAtivos.length > 0 && (
+          <View style={styles.secaoLocais}>
+            <Text style={styles.label}>Onde encontrar este item?</Text>
+            <View style={styles.chipsContainer}>
+              {locaisAtivos.map((local) => {
+                const selecionado = localSelecionado?.idLocal === local.idLocal;
+                return (
+                  <TouchableOpacity
+                    key={local.idLocal}
+                    activeOpacity={0.8}
+                    onPress={() => setLocalSelecionado(selecionado ? null : local)}
+                    style={[styles.chip, selecionado && styles.chipSelecionado]}
                   >
-                    {local.nome}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+                    <Ionicons
+                      name={selecionado ? "location" : "location-outline"}
+                      size={14}
+                      color={selecionado ? colors.white : colors.textMuted}
+                    />
+                    <Text style={[styles.chipTexto, selecionado && styles.chipTextoSelecionado]}>
+                      {local.nome}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
           </View>
-        </View>
+        )}
 
         <TouchableOpacity
           style={[
             styles.botaoSalvar,
-            !nomeItem.trim() && styles.botaoSalvarDesativado,
-            nomeItem.trim() && shadows.primary,
+            (!nomeItem.trim() || salvando) && styles.botaoSalvarDesativado,
+            nomeItem.trim() && !salvando && shadows.primary,
           ]}
           onPress={handleSalvar}
-          disabled={!nomeItem.trim()}
+          disabled={!nomeItem.trim() || salvando}
           activeOpacity={0.85}
         >
-          <Text style={styles.botaoSalvarTexto}>Adicionar à Lista</Text>
+          <Text style={styles.botaoSalvarTexto}>
+            {salvando ? "Salvando..." : "Adicionar à Lista"}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -160,107 +154,22 @@ export default function ModalAdicionar() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  scrollContainer: {
-    padding: spacing.lg,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: spacing.xl,
-    marginTop: 50,
-  },
-  titulo: {
-    fontSize: fontSizes.h2,
-    fontWeight: fontWeights.bold,
-    color: colors.dark,
-    fontFamily: "Poppins_700Bold",
-  },
-  botaoFechar: {
-    backgroundColor: colors.white,
-    padding: spacing.xs,
-    borderRadius: radius.full,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  inputGroup: {
-    marginBottom: spacing.xl,
-  },
-  label: {
-    fontSize: fontSizes.body,
-    fontWeight: fontWeights.semibold,
-    color: colors.dark,
-    fontFamily: "Inter_600SemiBold",
-    marginBottom: spacing.sm,
-  },
-  input: {
-    backgroundColor: colors.white,
-    borderRadius: radius.card,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.md,
-    fontSize: fontSizes.body,
-    color: colors.text,
-    borderWidth: 1,
-    borderColor: colors.border,
-    fontFamily: "Inter_400Regular",
-  },
-  textArea: {
-    minHeight: 80,
-    paddingTop: spacing.md,
-  },
-  secaoLocais: {
-    marginBottom: spacing.xxl,
-  },
-  chipsContainer: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: spacing.sm,
-    marginTop: spacing.xs,
-  },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: colors.white,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.full,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-    gap: 4,
-  },
-  chipSelecionado: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  chipTexto: {
-    fontSize: fontSizes.small,
-    color: colors.text,
-    fontWeight: fontWeights.medium,
-    fontFamily: "Inter_500Medium",
-  },
-  chipTextoSelecionado: {
-    color: colors.white,
-    fontWeight: fontWeights.semibold,
-  },
-  botaoSalvar: {
-    backgroundColor: colors.primary,
-    borderRadius: radius.button,
-    paddingVertical: spacing.md,
-    alignItems: "center",
-    marginTop: spacing.md,
-  },
-  botaoSalvarDesativado: {
-    backgroundColor: colors.textMuted,
-    opacity: 0.4,
-  },
-  botaoSalvarTexto: {
-    color: colors.white,
-    fontSize: fontSizes.body,
-    fontWeight: fontWeights.semibold,
-    letterSpacing: 0.2,
-  },
+  container: { flex: 1, backgroundColor: colors.background },
+  scrollContainer: { padding: spacing.lg },
+  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: spacing.xl, marginTop: 50 },
+  titulo: { fontSize: fontSizes.h2, fontWeight: fontWeights.bold, color: colors.dark, fontFamily: "Poppins_700Bold" },
+  botaoFechar: { backgroundColor: colors.white, padding: spacing.xs, borderRadius: radius.full, borderWidth: 1, borderColor: colors.border },
+  inputGroup: { marginBottom: spacing.xl },
+  label: { fontSize: fontSizes.body, fontWeight: fontWeights.semibold, color: colors.dark, fontFamily: "Inter_600SemiBold", marginBottom: spacing.sm },
+  input: { backgroundColor: colors.white, borderRadius: radius.card, paddingHorizontal: spacing.md, paddingVertical: spacing.md, fontSize: fontSizes.body, color: colors.text, borderWidth: 1, borderColor: colors.border, fontFamily: "Inter_400Regular" },
+  textArea: { minHeight: 80, paddingTop: spacing.md },
+  secaoLocais: { marginBottom: spacing.xxl },
+  chipsContainer: { flexDirection: "row", flexWrap: "wrap", gap: spacing.sm, marginTop: spacing.xs },
+  chip: { flexDirection: "row", alignItems: "center", backgroundColor: colors.white, borderWidth: 1, borderColor: colors.border, borderRadius: radius.full, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: 4 },
+  chipSelecionado: { backgroundColor: colors.primary, borderColor: colors.primary },
+  chipTexto: { fontSize: fontSizes.small, color: colors.text, fontWeight: fontWeights.medium, fontFamily: "Inter_500Medium" },
+  chipTextoSelecionado: { color: colors.white, fontWeight: fontWeights.semibold },
+  botaoSalvar: { backgroundColor: colors.primary, borderRadius: radius.button, paddingVertical: spacing.md, alignItems: "center", marginTop: spacing.md },
+  botaoSalvarDesativado: { backgroundColor: colors.textMuted, opacity: 0.4 },
+  botaoSalvarTexto: { color: colors.white, fontSize: fontSizes.body, fontWeight: fontWeights.semibold, letterSpacing: 0.2 },
 });
