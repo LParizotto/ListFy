@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Alert,
   KeyboardAvoidingView,
@@ -12,9 +12,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { addItem } from "../services/api";
-import { useLocais } from "../hooks/hooks";
 import { colors, fontSizes, fontWeights, radius, shadows, spacing } from "../constants/theme";
+import { useLocais } from "../hooks/hooks";
+import { addItem } from "../services/api";
 
 export default function ModalAdicionar() {
   const [nomeItem, setNomeItem] = useState("");

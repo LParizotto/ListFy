@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams } from "expo-router";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -11,7 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { useItens } from "../../hooks/hooks";
+import FilterLocal from "../../components/ui/FilterLocal";
 import {
   colors,
   fontSizes,
@@ -20,6 +21,7 @@ import {
   shadows,
   spacing,
 } from "../../constants/theme";
+import { useItens, useLocais } from "../../hooks/hooks";
 
 function ItemLista({ item, onToggle }) {
   return (
@@ -58,12 +60,17 @@ function ItemLista({ item, onToggle }) {
 export default function ListaPrincipal() {
   const { aba = "pendentes" } = useLocalSearchParams();
   const { itens, carregando, erro, toggleStatus, carregar } = useItens();
+  const [filtroLocal, setFiltroLocal] = useState(null)
+  const { locais } = useLocais()
+  const locaisAtivos = locais.filter((l) => l.ativo)
 
   const hoje = new Date().toLocaleDateString("pt-BR", { day: "numeric", month: "long" });
 
-  const itensFiltrados = itens.filter((item) =>
-    aba === "pendentes" ? !item.comprado : item.comprado
-  );
+  const itensFiltrados = itens.filter((item) => {
+    const passaAba = aba === "pendentes" ? !item.comprado : item.comprado
+    const passaLocal = filtroLocal === null || item.idLocal === filtroLocal
+    return passaAba && passaLocal
+  })
 
   const totalPendentes = itens.filter((i) => !i.comprado).length;
 
@@ -107,6 +114,11 @@ export default function ListaPrincipal() {
       </View>
 
       <View style={styles.abasContainer}>
+        <FilterLocal
+          locais={locaisAtivos}
+          value={filtroLocal}
+          onChange={setFiltroLocal}
+        />
         <Text style={styles.abaTitulo}>
           {aba === "pendentes" ? "Pendentes" : "Comprados"}
         </Text>
